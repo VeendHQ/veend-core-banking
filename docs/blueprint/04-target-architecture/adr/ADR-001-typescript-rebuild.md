@@ -21,6 +21,10 @@
 
 Option **C**. Fineract-Mod is a TypeScript modular monolith on the fineract-mod framework, hardened per ADR-008. Fineract's semantics (status codes, transaction types, allocation strategies, accounting roles, posting rules, COB steps) are the **reference behaviour**. Fineract instances are used to generate golden fixtures and to run in parallel during migration.
 
+## Amendment (2026-11-02)
+
+The scope was extended to a full microfinance-bank CBS by [ADR-010](ADR-010-full-mfb-core-banking-scope.md). The build decision stands, and should be re-confirmed after the BankOne discovery sizing (R-ARC-06).
+
 ## Consequences
 
 - We must build a schedule engine and an allocation engine with kobo-exact parity. This is the highest-risk area (R-FIN-01). It is front-loaded in P2 with golden testing.

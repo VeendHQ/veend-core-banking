@@ -1,6 +1,6 @@
 # Module (future): Loan Participation, Sale and Inter-Tenant Funding (on-lending)
 
-> Phase: design in P3, build in P7 · Priority: P1 (because on-lending is live today) · Status: Outline spec
+> Phase: design in P3, build in P9 · Priority: P1 (because on-lending is live today) · Status: Outline spec
 > Fineract reference: `fineract-investor` (external asset owners, `LoanAccountOwnerTransferBusinessStep`; [V] D1.1 §2, §8)
 > veend-tenant touchpoints: on-lending/prime: `processOnLendingLoan` (`jobs.js:8369`), `disburseOnlendingCyclicLoan`, `bookExternalPrimeLoan`, `processVidaOnLendingLoan`, plus `Loans.onlenderLoanId(s)`, `onlenderAccessToken(s)`, `primeLenderOriginalLoanId` ([V] D2.3 F5)
 
@@ -58,4 +58,4 @@ Saga chaos tests (kill between steps); a two-tenant GL reconciliation property.
 
 ## 14. Implementation status & outstanding gaps
 - **Migration interim:** on-lending loans keep the current duplicate representation, migrated as-is (both tenants), linked via `attributes.onlenderLoanRef`.
-- A target-model decision is needed before P7. [A] Business, finance and legal.
+- A target-model decision is needed before P9. [A] Business, finance and legal.

@@ -26,7 +26,8 @@ It also hosts the scheduler for other periodic jobs.
 | FR-COB-04 | Tenant steps: report snapshots (`rpt_aging_detail`, `rpt_active_loans_summary`), trial-balance check, `cob.completed` event |
 | FR-COB-05 | Inline COB for a single loan before any online command when it lags behind |
 | FR-COB-06 | Operations: view run status, retry failed partitions, re-run a date (idempotent), pause COB per tenant |
-| FR-COB-07 | Delinquency buckets per product, e.g. `0-30`, `31-60`, `61-90`, `91-180`, `180+` days. Tag history per loan |
+| FR-COB-07 | Delinquency buckets per product. The default set is the **CBN MFB prudential bands**: Performing (0), Pass & Watch (1–30), Substandard (31–60), Doubtful (61–90), Lost (≥ 91), with an IFRS 9 stage per band (see [writeoff-provisioning BR-WO-04/04b](writeoff-provisioning.md#4-business-rules)). Reporting bands for aging and maturity profiles (1–30, 31–60, 61–90, 91–180, 181–360, > 360, as in CBN MMFBR 763) are separate from classification. Tag history per loan |
+| FR-COB-09 | **Interest-in-suspense step** after classification: moves newly due interest on Substandard-or-worse loans to INTEREST_IN_SUSPENSE (BR-WO-04c), and reverses it on cure |
 | FR-COB-08 | Emit events: `loan.installment_due`, `loan.overdue` (first day), `loan.delinquency_changed`, `loan.npa_changed` |
 
 ## 3. Features

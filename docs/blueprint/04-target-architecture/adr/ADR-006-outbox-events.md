@@ -12,7 +12,7 @@
 
 - Write the `outbox_event` row in the command transaction. A dispatcher worker uses `FOR UPDATE SKIP LOCKED` plus `LISTEN/NOTIFY` and fans each event out to webhook subscriptions through Bull.
 - Payloads are JSON with a versioned `type` (e.g. `loan.repayment_posted.v1`), signed with HMAC-SHA256, and delivered at least once with exponential backoff and a DLQ.
-- Kafka/Avro is a later, additive sink (P7) if external consumers need it.
+- Kafka/Avro is a later, additive sink (P9) if external consumers need it.
 
 ## Consequences
 

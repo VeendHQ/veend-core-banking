@@ -52,6 +52,7 @@ Token validation is a single Express middleware. It sets `req.principal = {tenan
 | Per-tenant config | Timezone (business date roll), currency, rounding, COB schedule, webhook endpoints, maker-checker rules |
 | Cross-tenant operations | Prohibited in normal commands. On-lending and participation is a **platform-level inter-tenant service** that runs two tenant transactions coordinated by a saga with compensations, recorded in `platform.inter_tenant_transfer`. See [future/investor](../05-modules/future/investor.md) |
 | Non-production | Each tenant has a sandbox tenant (`<key>_sbx`). This removes the shared `veendhqautolending` pattern ([V] DS-04) |
+| Tenant types (ADR-010) | `LENDER` (Veend lending tenants: lending + GL), `TREASURY` (Giro: fixed deposits, wallet mirror), `BANK` (licensed MFB: all modules incl. CASA, teller, NIBSS, cards, payroll, shareholders, regulatory returns). `platform.tenant.type` gates module routes and COB steps. BANK tenants also need: branch-scoped users, transaction limits per KYC tier, PCI-DSS segmentation for card endpoints, and NIBSS connectivity per tenant |
 | Treasury tenant | Giro's Fineract tenant (`config.CBATenantId`; [V] D1.4 §1) becomes a dedicated `giro` (treasury) tenant. It holds investor clients and fixed deposits, and records deployments to lender tenants through the inter-tenant service. Service client role: `SERVICE_TREASURY` |
 | Noisy neighbour | Rate limit per tenant; COB partitions per tenant run at bounded concurrency |
 

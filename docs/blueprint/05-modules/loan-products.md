@@ -19,6 +19,9 @@ A loan product is a versioned template of terms, limits, interest method, repaym
 | FR-LP-05 | Activate and deactivate a product (start and close dates) |
 | FR-LP-06 | Compat P1–P3 shapes and field names (`interestRatePerPeriod`, `numberOfRepayments`, `minPrincipal`, …). This includes accepting Fineract enum ids (e.g. `interestType:1`, `accountingRule:4`) and the 12 GL-id parameters (`fundSourceAccountId`, …) |
 | FR-LP-07 | A product created via compat with no explicit GL ids gets mappings from the **tenant's default product accounting template** instead of hard-coded ids ([V] DS-08) |
+| FR-LP-08 | **Quick loan product creation** (recovery-team F-21): a wizard/API that creates a product from a template (e.g. "payroll loan", "micro loan", "SME loan", "payday") with a few inputs (rate, tenor range, amount range, fees). All other terms and GL mappings come from the template. The product is still versioned and validated (BR-LP-01..06) |
+| FR-LP-09 | **Mortgage loan products** (F-22): declining-balance EMI, long tenor (up to 30 years), optional interest-only or construction-draw period (multi-tranche, P9), mandatory property collateral with an LTV limit and insurance ([collateral-guarantors](collateral-guarantors.md) FR-COL-08), equity-contribution check, optional variable rate index [A] |
+| FR-LP-10 | Product classification attributes for regulatory reporting: CBN loan type (micro/SME/staff/other), lending model, default economic sector (overridable per loan) |
 
 ## 3. Features
 
@@ -26,7 +29,7 @@ A loan product is a versioned template of terms, limits, interest method, repaym
 |---|---|---|---|
 | Terms | Principal, tenure, frequency, rate ranges | Yes | |
 | Interest | FLAT, DECLINING_BALANCE (EMI and equal principal) | Yes | Production uses FLAT ([V] `interestType: 1`); declining needed for future products |
-| Interest recalculation | Daily recalculation on early or late payment | No | P7; [A] verify it is disabled in production (`isInterestRecalculationEnabled`) |
+| Interest recalculation | Daily recalculation on early or late payment | No | P9; [A] verify it is disabled in production (`isInterestRecalculationEnabled`) |
 | Strategy | `mifos-standard-strategy` + production strategies | Yes | [A] read `loan_transaction_strategy_code` for every live product. veend-tenant takes `transactionProcessingStrategyOptions[0]` ([V] `lendlot/index.js:868`), so the actual value depends on Fineract's option ordering |
 | Charges | Attach charge definitions (see [charges](charges.md)) | Yes | |
 | Accounting | NONE, CASH, ACCRUAL_UPFRONT, ACCRUAL_PERIODIC; role mappings; payment-type overrides | Yes | |

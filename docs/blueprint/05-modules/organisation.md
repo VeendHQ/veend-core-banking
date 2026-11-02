@@ -23,6 +23,7 @@ This module holds the reference data that the lending and accounting modules dep
 | FR-ORG-04 | CRUD for payment types `{code, name, is_cash, clearing_gl_account_id, active}`. Seed: MANUAL, GIRO, REMITA, IPPIS, PAYSTACK, FLUTTERWAVE, CORALPAY, CGATE, ONEPIPE, VIDA, INSURANCE, MIGRATION |
 | FR-ORG-05 | Define holidays per office (date range, reschedule-to date) and the tenant's working days (an RRULE `BYDAY`) |
 | FR-ORG-06 | Provide a function to move a due date that lands on a non-working day or holiday, per product policy |
+| FR-ORG-07 | **Branch management** for BANK tenants (recovery-team F-59): branch master (code, region, state/LGA, CBN branch code), branch status, branch GL segment, user-branch assignment. Operational controls are in [teller-branch-cash](teller-branch-cash.md) |
 
 ## 3. Features
 

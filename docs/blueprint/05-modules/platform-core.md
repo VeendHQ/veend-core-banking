@@ -29,6 +29,7 @@ It owns the platform schema and the `command_log`, `entity_audit`, `idempotency_
 | FR-PLT-08 | Maintain a per-tenant business date and COB date. Allow manual advance for operations (with permission) and an automatic daily roll in the tenant timezone |
 | FR-PLT-09 | Expose a typed tenant configuration (timezone, currency, rounding default, max backdate days, COB schedule, reversal window) |
 | FR-PLT-10 | Provide health and readiness checks, and a migration-status endpoint |
+| FR-PLT-11 | **Transaction limits** (RT-10): per role and permission, a maximum amount per command and per business day. A command above the limit is rejected (`422 LIMIT_EXCEEDED`), or routed to maker-checker when configured. Limits are stored in `transaction_limit(role_id, permission_code, per_txn_max, per_day_max)` |
 
 ## 3. Features & sub-features
 

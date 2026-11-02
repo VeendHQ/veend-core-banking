@@ -47,6 +47,9 @@ dist/
 dist-test/
 *.tsbuildinfo
 
+# Stakeholder submissions containing customer PII (BVN, phone, address, guarantors) - never commit
+docs/cba-notes-recovery-team/
+
 # IDE
 .vscode/
 .idea/

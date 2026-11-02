@@ -1,6 +1,6 @@
 # Module (future): Groups, Centers and Group Loans (JLG/GLIM)
 
-> Phase: P7+ · Priority: P3 · Status: Outline spec
+> Phase: P9+ · Priority: P3 · Status: Outline spec
 > Fineract reference: `m_group`, group/center resources, GLIM (`glimrepayment` command at [V] `LoansApiResource.java:694`)
 > veend-tenant touchpoints: none. Lending is individual, payroll-backed ([V] D1.2 §3).
 

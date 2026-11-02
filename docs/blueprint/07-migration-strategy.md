@@ -44,7 +44,7 @@ From roadmap P-D. This must be completed before the ETL design is final.
 | 12 | Local write-off (`isWriteOff`) | — | `cba.loans.writeOff(id, {date, reason})`; local flag set from the event | **M3 (fixes DF-04)** |
 | 13 | Closure detection by polling (`getLoan`, Remita/IPPIS jobs) and local float math (`payoff`) | Unchanged | Webhooks `loan.closed`, `loan.repayment_posted`; local mirror updated from events | M4 |
 | 14 | Arrears via the Aging report into `Cbaloanarrears` | Compat R3 | Events `loan.overdue`, `loan.delinquency_changed`; `cba.loans.delinquency()` | M4 |
-| 15 | On-lending cross-tenant booking | Compat on the funding tenant (unchanged) | Inter-tenant funding (P7) | M5+ |
+| 15 | On-lending cross-tenant booking | Compat on the funding tenant (unchanged) | Inter-tenant funding (P9) | M5+ |
 
 ### veend-tenant change packages (to be scheduled with the veend-tenant team; **not part of this phase**)
 
@@ -195,6 +195,7 @@ Rollback triggers: any loan-level diff > ₦0 not explained within 24 h; trial b
 2. Compat contract corpus (≥ 200 per endpoint) green against the tenant's migrated data.
 3. Business smoke scenarios executed in staging with a copy of the tenant's data: eligibility quote, book, disburse confirm, Remita deduction posting, card repayment webhook, reversal, payoff, write-off (M3), dashboard reports.
 4. Finance sign-off on the trial balance and portfolio report at T-25m.
+4a. The recovery-team UAT pack (roadmap P5) executed on the tenant's migrated data, with evidence retained: transaction reference, before/after balances, GL entries, report output, exception log.
 5. Lender operations sign-off (dashboard figures unchanged).
 
 ## 11. Backward compatibility guarantees
@@ -250,7 +251,7 @@ Policy changes (native SIMPLE mode, rate locking, calendar quarters, funding-dat
 | **G1: client hygiene** | Stateless client; redact headers in logs; remove secret defaults from config (FD-11); delete dead methods (`deposit`, `accountTransfer`) | Yes |
 | **G2: CBA-reported money** | Report each FD funding, deployment and payout to the CBA with `externalRef` (`/v1/deposit-accounts/{id}/deposits`, `/deployments`, `/payouts/{n}/settlement`), instead of keeping them only in Primelogs | No (needs P5-D) |
 | **G3: CBA-driven schedule** | Replace `dailyCheckLoanAccounts`/`checkLoanAccount`/`postInterest*` with the CBA payout worklist (`GET /v1/deposit-payouts?status=DUE`) and `deposit.*` webhooks. Giro keeps executing transfers, notifications, partner `webhookURL` callbacks and referral commissions | No |
-| G4 (optional, per D9) | Wallet ledger to the CBA | No (P7) |
+| G4 (optional, per D9) | Wallet ledger to the CBA | No (P9) |
 
 ### 12.5 Cut-over
 
@@ -262,3 +263,34 @@ Policy changes (native SIMPLE mode, rate locking, calendar quarters, funding-dat
 
 **Rollback:** until the first CBA-computed payout is settled, Giro can revert to its own computation, because no Giro data was mutated. After that point, a rollback requires replaying the settled payouts into Giro's `interestPayouts`.
 
+## 13. BankOne (Pettysave MFB) migration
+
+Scope: moving a licensed MFB from the BankOne vendor CBS to Fineract-Mod (ADR-010). Evidence of the current state: [input review](09-input-reviews/recovery-team-2026-10.md).
+
+### 13.1 Principles specific to a bank migration
+
+- **Source of truth is the BankOne database or API, not report exports.** The exported TB does not balance, and the P&L period label is suspect (R-DAT-02).
+- **Fix regulatory data before migrating it.** The CBN 761 vs PAR classification discrepancy (~₦100m potential provision gap) must be resolved by Pettysave compliance and finance first. Fineract-Mod then recomputes classification from loan-level DPD and must match the corrected figures.
+- **Customer-facing continuity**: NUBANs, card PANs (via processor), mandates and standing instructions keep working. Statements show history across the cut-over.
+
+### 13.2 Data scope and mapping
+
+| BankOne domain | Fineract-Mod target | Notes |
+|---|---|---|
+| Branches, users, roles, tellers, vaults | office (FR-ORG-07), app_user/role, teller, vault | User credentials are not migrated (re-enrolment/IdP) |
+| CoA, account categories, entry codes | gl_account + categories (FR-ACC-10), entry_code | GL codes preserved (e.g. 10080006 Vault [V TB format]) |
+| Customers (individual/corporate), KYC, risk | client (FR-CLI-09..11) | BVN/NIN encrypted; KYC tier recomputed and reviewed |
+| Savings, current, special, term, target savings | casa_account, deposit_account, commitment_plan | Balances, holds, interest accrued, dormancy; NUBAN kept |
+| Loans (887 at 30-Sep-2026) with schedules and transactions | loan, loan_installment, loan_transaction | Tags from the PAR (officer, sector, lending model, MDA/IPPIS, restructured flags); collateral and guarantors → collateral-guarantors |
+| Provisions, interest in suspense | provisioning_entry, IIS balances | Opening position as approved by finance after the 761 fix |
+| Fixed assets, prepayments | fixed_asset, amortization_schedule | From BankOne Fixed Assets / Amortization menus or finance register |
+| Shareholders, deposits for shares | shareholder, share_holding | Register reconciled to ₦200m ordinary + ₦92m deposit for shares [V BS] |
+| GL balances and history | journal_entry/line (history, or opening balances per policy) | Full history if extractable; otherwise opening balances at cut-over plus BankOne reports archived |
+
+### 13.3 Reconciliation (cut-over date)
+
+Trial balance by GL code (exact) · balance sheet and CBN MMFBR 300 regenerated · loan book: per loan principal not-yet-due/past-due, interest, DPD, classification (PAR report) · per CASA/term account ledger and available balances · teller and vault positions · Σ customer balances = deposit control GLs · CBN returns 761/763/201 regenerated and compared.
+
+### 13.4 Cut-over
+
+A weekend cut-over: freeze BankOne postings → final extract → load → reconcile → switch NIBSS routing, card processor account mapping, USSD and channels → smoke tests (teller cash, NIP in/out, loan repayment, statements) → go-live. BankOne stays read-only for the agreed retention period. Notify the CBN as required [A]. Rollback: switch channels back to BankOne if go-live criteria fail within the window (postings during the window are replayed).

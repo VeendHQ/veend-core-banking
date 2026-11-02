@@ -20,6 +20,9 @@ This module is the CBA party record for each borrower: identity, contact details
 | FR-CLI-06 | Enforce a de-duplication policy: by default, unique active `mobileNo` per tenant **and** unique `bvn_hash` per tenant |
 | FR-CLI-07 | Provide the compat endpoints C1–C4 with Fineract shapes |
 | FR-CLI-08 | Provide a client summary: active loans, total outstanding, arrears (a read model for veend-tenant) |
+| FR-CLI-09 | **Customer risk profile** (recovery-team F-02): risk rating (LOW/MEDIUM/HIGH) from rules (occupation, geography, product, channel, PEP, adverse media), PEP flag, source of funds, next review date. High-risk clients need enhanced due diligence and approval |
+| FR-CLI-10 | **CBN KYC tier** (1/2/3), derived from the identity evidence collected (BVN/NIN verified, address verified, ID documents). Drives deposit and transaction limits ([savings-current-accounts](savings-current-accounts.md) FR-SAV-04) |
+| FR-CLI-11 | Corporate clients (non-person legal form): RC number, TIN, directors and signatories (as linked persons), for current accounts and SME loans |
 
 ## 3. Features
 

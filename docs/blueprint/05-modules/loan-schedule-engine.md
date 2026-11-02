@@ -36,8 +36,8 @@ It is used by:
 | Interest calculation period DAILY vs SAME_AS_REPAYMENT_PERIOD | Yes |
 | Days in year/month variants | Yes |
 | Holiday/working-day adjustment | Yes (policy flag) |
-| Interest recalculation (reducing on prepayment) | No (P7) |
-| Progressive (Fineract "progressive loan") | No (P7) |
+| Interest recalculation (reducing on prepayment) | No (P9) |
+| Progressive (Fineract "progressive loan") | No (P9) |
 | Variable installments, multi-tranche, down payment | No |
 
 ## 4. Business rules (algorithms)

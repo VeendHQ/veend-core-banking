@@ -18,7 +18,14 @@ This module provides versioned, tested financial and portfolio reports for finan
 | FR-RPT-04 | Compat `Aging Detail`: 15 columns in the order listed in D2.2 §3, account number zero-padded |
 | FR-RPT-05 | Native MVP catalogue (see §3) |
 | FR-RPT-06 | Heavy reports run on the read replica, or from COB snapshot tables for "as of COB date" |
-| FR-RPT-07 | Scheduled report delivery (email or SFTP): P7 |
+| FR-RPT-07 | Scheduled report delivery (email or SFTP): P9 |
+| FR-RPT-08 | **Report metadata** on every output (RT-06): as-of date, generated-at, data refresh time (COB date or live), definition version, filters and exclusions, tenant. Re-running a report for a past as-of date reproduces the same figures, except for documented back-dated adjustments, which are listed |
+| FR-RPT-09 | **Statements** (RT-05): loan and deposit account statements with opening balance, booking date, value date, reference, description, debit, credit, running balance and closing balance, for a period. Tested: closing balance = ledger balance at the same cut-off |
+| FR-RPT-10 | **Call-over report** (RT-07): per business date, every posting with GL account, debit/credit, reference, entry code, maker, checker, approval time, terminal/IP and narration. Plus a sign-off record for the reviewer |
+| FR-RPT-11 | **CBN MFB monthly returns** (RT-08), generated from GL + classification + maturity buckets, with a validation step (totals tie to TB) before export in the CBN template layout |
+| FR-RPT-13 | **Multiple and batch statements** (recovery-team F-39): generate statements for many accounts in one job (by branch, product or list); a batch-statement queue with status, view/download per batch, and optional email delivery. Statement layout versions are configurable (the guide mentions "Statement versions 1.0 and 2.0"). Every version must reconcile to the ledger |
+| FR-RPT-14 | **Management reports** (F-43): collections by channel and officer, maturity pipeline (loans and deposits), income analysis, recovery performance, deposit mix and cost of funds |
+| FR-RPT-12 | **Read-only reporting views** (RT-11) in schema `rpt_views` for Metabase/BI, each with a definition entry in the catalogue |
 
 ## 3. Report catalogue (MVP)
 
@@ -28,7 +35,8 @@ This module provides versioned, tested financial and portfolio reports for finan
 | `compat.AgingDetail` | Compat | R_officeId | `rpt_aging_detail` snapshot (COB) |
 | `gl.trial_balance` | Finance | asOf, office | `gl_balance` / lines |
 | `gl.general_ledger` | Finance | account, from, to | `journal_line` |
-| `gl.balance_sheet`, `gl.income_statement` | Finance | asOf / from-to | lines by account type |
+| `gl.balance_sheet`, `gl.income_statement` | Finance | asOf / from-to | lines by account type/category |
+| `gl.cash_flow` | Finance | from, to | GL movements by category (FR-ACC-11) |
 | `portfolio.summary` | Portfolio | asOf, product, office | loans |
 | `portfolio.par` | Portfolio | asOf, buckets | `loan_delinquency` |
 | `portfolio.aging` | Portfolio | asOf | `loan_delinquency` |
@@ -38,6 +46,12 @@ This module provides versioned, tested financial and portfolio reports for finan
 | `portfolio.provisioning` | Finance | runDate | provisioning tables |
 | `recon.clearing_account` | Finance | paymentType, from, to | lines on the clearing GL with `external_ref` |
 | `audit.commands` | Audit | from, to, actor, type | `command_log` |
+| `audit.callover` | Audit | businessDate, office | journal lines + command_log |
+| `statement.loan`, `statement.deposit` | Customer | accountId, from, to | transactions + running balance |
+| `portfolio.classification` | Risk | asOf, basis | `loan_delinquency` + provisioning basis (BR-WO-04a) |
+| `cbn.mmfbr300` (assets & liabilities), `cbn.mmfbr1000` (P&L), `cbn.mmfbr761` (classification), `cbn.mmfbr771` (NPL schedule), `cbn.mmfbr763` (loan maturity profile) | Regulatory | reportingDate | GL + classification; ties to TB |
+| `cbn.mmfbr201/202/141` (deposit structure, insured deposits, other deposits) | Regulatory | reportingDate | Only when deposit-taking is in scope ([input review §8](../09-input-reviews/recovery-team-2026-10.md#8-open-decisions-raised-by-this-submission)) |
+| Remaining MMFBR schedules (001, 221, 311, 312, 321, 322, 451, 501, 641, 642, 651, 711, 746, 762, 764, 811, 933, 951, 980, 996, AML/KYC) and credit-bureau files | Regulatory | reportingDate | **In scope (ADR-010)**: delivered by [regulatory-reporting](regulatory-reporting.md) in P7-G. Some need non-CBA inputs (placements, borrowings, staff counts), captured via the treasury/manual-input screens there |
 
 ## 4. Business rules
 

@@ -21,6 +21,8 @@ This module is the tenant's general ledger: the chart of accounts, immutable bal
 | FR-ACC-07 | Queries: journal entries by account, office, date range, source, loan or transaction; account ledger with running balance; trial balance as of a date; balance sheet and income statement (by account type and tag) |
 | FR-ACC-08 | Financial-activity mappings (Fineract `acc_gl_financial_activity_account`): e.g. ASSET_TRANSFER, LIABILITY_TRANSFER, OPENING_BALANCES_CONTRA |
 | FR-ACC-09 | **Opening balances** posting for migration (source type `MIGRATION`) |
+| FR-ACC-10 | **Account categories** (recovery-team F-04): a configurable category tree on GL accounts (e.g. Cash Balances, Due From, Loans and Advances, Fixed Assets, Other Assets, Deposit Accounts, Other Liabilities, Capital & Reserves, Interest Income, Staff Costs, Overheads, as seen in the BankOne TB/BS [V]). It drives financial-statement and regulatory groupings, separately from GL type |
+| FR-ACC-11 | **Cash-flow statement** (indirect method) from GL movements by category mapping (recovery-team F-42) |
 
 ## 3. Features
 

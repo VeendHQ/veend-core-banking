@@ -23,6 +23,10 @@ This module manages the loan aggregate from application to closure: submission, 
 | FR-LN-09 | **Status derivation** after every transaction: ACTIVE(300) / CLOSED_OBLIGATIONS_MET(600) / OVERPAID(700) / CLOSED_WRITTEN_OFF(601) |
 | FR-LN-10 | **Read model** `GET /loans/{id}`: summary, status flags, timeline, schedule, transactions and charges. Compat shape per D2.2 §4 |
 | FR-LN-11 | **Payoff quote** for a date: outstanding principal + interest due to date (per product method) + fees + penalties |
+| FR-LN-12 | **Balance definitions** (RT-04; the recovery-team guide §3.3, §8). Every loan read model and report uses these exact fields, each documented in the API schema: `principalApproved`, `principalDisbursed`, `principalRepaid`, `principalNotYetDue` (BankOne's "Principal Bal."), `principalPastDue`, `totalPrincipalOutstanding` (= not-yet-due + past-due; BankOne's "Total Outst. Prin."), `interestAccrued`, `interestPastDue`, `feesUnpaid`, `penaltiesUnpaid`, `arrearsAmount` (= all past-due components), `totalOutstanding`, `daysPastDue`, `classification`, `eclStage`, `maturityDate`, `lastPaymentDate`, `lastPaymentAmount`, `nextDueDate`, `isRestructured`. **Never** substitute `totalPrincipalOutstanding` for `arrearsAmount` |
+| FR-LN-14 | **Application and appraisal workflow** (recovery-team F-34). Configurable stages per product, e.g. APPLICATION → DOCUMENTS → APPRAISAL (credit analysis: income, DTI, bureau report via [regulatory-reporting](regulatory-reporting.md) FR-REG-08, collateral coverage, risk score) → RECOMMENDATION → APPROVAL (tiered authority by amount: officer / branch manager / credit committee) → OFFER → ACCEPTANCE → DISBURSEMENT. A checklist, comments and documents are kept per stage. Auto-approval stays available for veend-tenant's digital flow (`BookLoan`) |
+| FR-LN-15 | **Loan tagging** for portfolio and regulatory reporting (F-63): account officer, economic sector (CBN sector list), lending model (individual/group/other), MDA and IPPIS number for payroll loans, repayment mode, region. As carried in the BankOne PAR [V structure] |
+| FR-LN-13 | **Recovery read model** `GET /v1/loans/recovery-view?classification=&dpdGte=`: the fields above plus client contact, product, officer and collateral/guarantor references, for the recovery team's tools. Read-only; recovery activity (calls, promises-to-pay, visits) stays in the recovery system and never changes balances |
 
 ## 3. Features
 
@@ -35,7 +39,7 @@ This module manages the loan aggregate from application to closure: submission, 
 | Multi-tranche | | No |
 | Loan officer assignment | | No (recovery agents stay in veend-tenant) |
 | Guarantors, collateral | | No |
-| Loan sale / participation | | P7 ([future/investor](future/investor.md)) |
+| Loan sale / participation | | P9 ([future/investor](future/investor.md)) |
 
 ## 4. Business rules
 

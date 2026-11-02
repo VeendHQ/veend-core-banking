@@ -20,9 +20,11 @@ This module recognises credit losses correctly in the books. It covers:
 | FR-WO-02 | **Undo write-off** (the latest one, if no recoveries posted after it) |
 | FR-WO-03 | **Recovery repayment** on a 601 loan: amount, value date, payment type (incl. `INSURANCE`), external ref. Income goes to INCOME_FROM_RECOVERY. Idempotent like repayments |
 | FR-WO-04 | **Charge-off** (status stays 300, flag `charged_off`), with GL reclassification per Fineract's charge-off accounts. Optional in MVP (enabled per tenant) [A] |
-| FR-WO-05 | **Provisioning criteria**: categories (STANDARD, SUB-STANDARD, DOUBTFUL, LOSS) × DPD ranges × % per product group, with the provision expense and allowance GL accounts |
+| FR-WO-05 | **Provisioning criteria**: categories × DPD ranges × % per product group, with the provision expense and allowance GL accounts. The default template is the CBN MFB set (PERFORMING, PASS_AND_WATCH, SUBSTANDARD, DOUBTFUL, LOST; BR-WO-04). Fineract's seeded STANDARD/SUB-STANDARD/DOUBTFUL/LOSS categories map onto it at migration |
 | FR-WO-06 | **Provisioning run** (monthly): compute the required allowance per loan (outstanding principal × category %). Post the **delta** versus the previous run as one journal entry per category/product. Maker-checker to post |
 | FR-WO-07 | Reports: write-off register, recovery register, provisioning schedule |
+| FR-WO-09 | **Expected credit loss** (recovery-team F-37; phase P7-G): `ECL = EAD × PD × LGD (× discount)`. 12-month PD for Stage 1, lifetime PD for Stages 2–3. PD from roll-rate/transition matrices per product segment (from COB delinquency history), LGD from recovery history and collateral coverage. Forward-looking overlay as a management input. A monthly ECL run produces the IFRS impairment allowance; the **regulatory risk reserve** = max(0, prudential provision − IFRS ECL), transferred via [shareholder-management](shareholder-management.md) FR-SHR-07. Model parameters are versioned and approved [A: model validation by finance/risk] |
+| FR-WO-10 | **Provision billing / provision loans / provision overdrawn accounts** (F-31–F-33): the monthly run covers loans and overdrawn CASA (classification from FR-SAV-07), with per-account provision detail ("provision loans") and a posted summary ("provision billing") |
 | FR-WO-08 | Bulk write-off: `POST /v1/write-offs/batch` (up to 500 loans, per-item results) for the portfolio clean-up during migration |
 
 ## 3. Features
@@ -43,7 +45,10 @@ This module recognises credit losses correctly in the books. It covers:
 | BR-WO-01 | Write-off is allowed only on ACTIVE loans with outstanding > 0. The write-off date is ≥ the last transaction value date and ≤ the business date |
 | BR-WO-02 | After write-off, standard repayments are rejected (or auto-routed to recovery when `route_repayments_to_recovery=true`; recommended because veend-tenant's collection jobs keep running) |
 | BR-WO-03 | Undo write-off is allowed only if no recovery came after it, and is maker-checker |
-| BR-WO-04 | Provisioning category by DPD at the run date (default ranges: STANDARD 0–30, SUB-STANDARD 31–90, DOUBTFUL 91–180, LOSS 181+) [A: align with CBN prudential guidelines and finance policy] |
+| BR-WO-04 | Provisioning category by DPD at the run date. The **default template is the CBN MFB prudential classification**: PERFORMING 0 DPD; PASS_AND_WATCH 1–30; SUBSTANDARD 31–60; DOUBTFUL 61–90; LOST ≥ 91. Rates are 1% general on PERFORMING and specific 5% / 20% / 50% / 100%. [V] These reproduce Pettysave MFB's booked provision exactly: specific ₦14,184.05k and general ₦1,997.98k on its MMFBR 761 buckets ([input review §2.2](../09-input-reviews/recovery-team-2026-10.md#22-loan-classification-the-cbn-return-and-the-par-report-disagree-materially)). Templates for other licence types (e.g. finance company) are configurable [A: confirm with compliance per licence] |
+| BR-WO-04a | **Exposure basis** is an explicit criteria parameter: `TOTAL_OUTSTANDING_PRINCIPAL` (default), `TOTAL_OUTSTANDING` (principal + interest + fees), or `PAST_DUE_ONLY`. It is printed on every provisioning entry and on the CBN 761 output, so a classification report and a regulatory return can never silently use different bases (the Pettysave discrepancy) |
+| BR-WO-04b | **IFRS 9 stage** is derived alongside: Stage 1 = 0–30 DPD; Stage 2 = 31–90 (or significant increase in credit risk, e.g. restructured within the cure period); Stage 3 = ≥ 91 or written off. ECL is measured per FR-WO-09 |
+| BR-WO-04c | **Interest in suspense**: from SUBSTANDARD onward, newly due interest is not taken to income. It is booked Dr INTEREST_RECEIVABLE / Cr INTEREST_IN_SUSPENSE (liability), and released to income only when collected. For ACCRUAL_UPFRONT products, interest already recognised for those installments is reclassified to suspense on the classification change [A: finance policy] |
 | BR-WO-05 | Written-off loans carry 0 provision (already derecognised) |
 | BR-WO-06 | A provisioning run is idempotent per run date. Re-running replaces the unposted draft; a posted run can only be reversed by the next run's delta |
 
@@ -98,6 +103,8 @@ Events `loan.written_off`, `loan.writeoff_undone`, `loan.recovery_posted`, `prov
 | Write-off (accrual) | LOSSES_WRITTEN_OFF (principal + accrued interest/fees/penalties) | LOAN_PORTFOLIO, INTEREST_/FEES_/PENALTIES_RECEIVABLE |
 | Write-off (accrual-upfront, unearned interest) | INTEREST_ON_LOANS (reverse unearned portion) [A finance policy] | INTEREST_RECEIVABLE |
 | Recovery | Clearing (payment type, e.g. INSURANCE clearing) | INCOME_FROM_RECOVERY |
+| Interest to suspense (Substandard or worse) | INTEREST_RECEIVABLE (or INTEREST_ON_LOANS when reclassifying upfront-recognised interest) | INTEREST_IN_SUSPENSE (liability) |
+| Suspended interest collected | INTEREST_IN_SUSPENSE | INTEREST_ON_LOANS |
 | Provision increase | PROVISION_EXPENSE | PROVISION_ALLOWANCE (contra-asset) |
 | Provision release | PROVISION_ALLOWANCE | PROVISION_EXPENSE (or recovery income) |
 

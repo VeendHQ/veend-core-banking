@@ -69,7 +69,7 @@ Likelihood (L) and Impact (I) are scored 1–5. Score = L × I. **≥ 15 = red**
 |---|---|---|---|---|---|
 | R-TEN-01 | Schema migrations fail on a subset of tenants during deploy | 3 | 3 | 9 | Pre-deploy job blocks the deploy; expand/contract migrations; per-tenant version tracking |
 | R-TEN-02 | Noisy tenant degrades others (COB, bulk posts) | 3 | 3 | 9 | Per-tenant rate limits and COB concurrency caps |
-| R-TEN-03 | Cross-tenant on-lending semantics are wrong in the interim (duplicate loans) | 4 | 3 | 12 | Migrate as-is with links; target-model ADR in P3; build in P7 |
+| R-TEN-03 | Cross-tenant on-lending semantics are wrong in the interim (duplicate loans) | 4 | 3 | 12 | Migrate as-is with links; target-model ADR in P3; build in P9 |
 | R-TEN-04 | A lender requires a physically separate DB | 2 | 3 | 6 | ADR-003 escape hatch (per-tenant DSN) |
 
 ## 8. Integration challenges
@@ -99,10 +99,29 @@ Likelihood (L) and Impact (I) are scored 1–5. Score = L × I. **≥ 15 = red**
 | R-FD-01 | **The investor liability is unbooked today** (FD-01). The opening balance constructed at migration may not match what finance or investors expect | 4 | 5 | **20** | Exact per-account reconciliation against Giro's own formula (D6 §12.3); finance sign-off on the opening liability; investor statements generated from both systems during a parallel month |
 | R-FD-02 | Changing interest arithmetic alters investor payouts (float/rounding, tenure `'2'`, 90-day quarters) | 3 | 4 | 12 | `LEGACY_GIRO_DAILY_ROUNDED` for in-flight deposits; new rules for new deposits only; communicate |
 | R-FD-03 | **Balance-sheet ownership is unclear** (Giro/Veend treasury vs lender tenant) for deposits that fund on-lending | 4 | 4 | **16** | D9 decision before P5-D build; the posting design supports either owner |
-| R-FD-04 | Deployment and on-lending loans are not linked in any ledger (FD-13). Exposure per investor cannot be traced | 3 | 4 | 12 | `deposit_deployment` in MVP; full participation accounting in P7 |
+| R-FD-04 | Deployment and on-lending loans are not linked in any ledger (FD-13). Exposure per investor cannot be traced | 3 | 4 | 12 | `deposit_deployment` in MVP; full participation accounting in P9 |
 | R-FD-05 | Giro and veend-tenant cut-overs interact: the Eden loan sits on a lender tenant migrated separately | 3 | 3 | 9 | Sequence: migrate the lending-to-lender tenant before or with Giro FD; deployment refs use `legacy_fineract_id` so they survive either order |
 | R-FD-06 | Secret defaults in Giro config (FD-11) and logged CBA credentials | 3 | 4 | 12 | Giro package G1; rotate credentials at cut-over |
 | R-FD-07 | Scope creep into the Giro wallet ledger (V3 SQL balances, liens on Fineract) | 3 | 3 | 9 | Explicitly out of MVP; a stub serves wallet compat calls; separate decision (D9) |
+
+## 9b. Risks raised by the recovery-team submission
+
+| ID | Risk | L | I | Score | Mitigation |
+|---|---|---|---|---|---|
+| R-REG-01 | **Regulatory classification inconsistency.** Pettysave's CBN 761 reports Lost ₦5.5m while its PAR report shows Lost ₦103.9m on the same date. Under the same rates that is a potential ~₦100m provision shortfall ([input review §2.2](09-input-reviews/recovery-team-2026-10.md#22-loan-classification-the-cbn-return-and-the-par-report-disagree-materially)) | 4 | 5 | **20** | Escalate to Pettysave finance and compliance now (independent of Fineract-Mod). In Fineract-Mod: one classification engine feeds both PAR and CBN returns, with the exposure basis printed (BR-WO-04a) |
+| R-REG-02 | Scope expansion to a deposit-taking MFB (current accounts, teller/vault, NIBSS, full CBN returns) without re-planning | 3 | 4 | 12 | Explicit scope decision (input review §8 #1); separate phase if accepted |
+| R-DAT-01 | **Borrower PII (BVN, phone, address, guarantors) for 887 customers sits untracked in the repo working tree** (`docs/cba-notes-recovery-team/`) | 3 | 5 | **15** | Move to a restricted share; add to `.gitignore`; never commit; use anonymised extracts for testing |
+| R-DAT-02 | Vendor-report exports are unreliable as migration sources (TB does not balance as exported; P&L period label suspect) | 3 | 3 | 9 | Migrate from the source DB or API, never from report exports; regenerate reports for any reconciliation baseline |
+
+## 9c. Risks from the full-MFB scope (ADR-010)
+
+| ID | Risk | L | I | Score | Mitigation |
+|---|---|---|---|---|---|
+| R-ARC-06 | **Scope and effort**: building every vendor-CBS feature (deposits, NIBSS, cards, payroll, shareholders, full CBN returns) roughly doubles delivery and competes with the lending migration | 4 | 5 | **20** | Second squad; banking track starts after the ledger is proven (G4); feature register as a hard checklist; re-confirm build vs buy after D10 sizing |
+| R-REG-03 | **Licensing and certification lead times** (NIBSS membership/certification, card scheme/processor certification, PCI-DSS, CBN IT standards) delay the banking go-live | 4 | 4 | **16** | Start onboarding in P-D; sandbox-first adapters; external QSA for PCI scope |
+| R-OPS-07 | Running a deposit-taking bank's operations (24×7 NIP inbound, teller EOD) needs operational maturity beyond lending | 3 | 5 | **15** | SRE on-call, runbooks per channel, DR drills before G8-B, staged rollout (back office → teller → digital channels) |
+| R-MIG-06 | BankOne data access depends on the vendor's cooperation and contract terms | 3 | 4 | 12 | Early legal and vendor engagement (D10); fallback to full report and statement extracts plus reconciliation |
+| R-SEC-08 | Larger PII and payment-data footprint (cards, NIBSS, payroll) | 3 | 5 | **15** | PCI segmentation, tokenisation, payroll data restricted, NDPA DPIA before go-live |
 
 ## 10. Top risks (red) and owners
 
@@ -114,3 +133,5 @@ Likelihood (L) and Impact (I) are scored 1–5. Score = L × I. **≥ 15 = red**
 | 4 | R-OPS-01 | Domain ramp-up |
 | 5 | R-FIN-03 | Backdated replay correctness |
 | 6 | R-FD-01 / R-FD-03 | Investor deposit liability unbooked today; unclear balance-sheet owner |
+| 7 | R-ARC-06 / R-REG-03 | Full-MFB scope effort and certification lead times |
+| 8 | R-REG-01 | Pettysave CBN 761 vs PAR classification discrepancy |

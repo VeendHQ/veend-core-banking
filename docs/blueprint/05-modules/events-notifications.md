@@ -82,7 +82,7 @@ platform-core. All domain modules produce events.
 
 ## 9. Integration
 
-veend-tenant needs a new endpoint `POST /cba/events` that verifies the signature, deduplicates via an `event_uid` unique index, and dispatches to handlers (M4). A Kafka sink is P7.
+veend-tenant needs a new endpoint `POST /cba/events` that verifies the signature, deduplicates via an `event_uid` unique index, and dispatches to handlers (M4). A Kafka sink is P9.
 
 ## 10. Authorization
 

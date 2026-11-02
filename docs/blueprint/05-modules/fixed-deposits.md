@@ -36,6 +36,8 @@ It fixes FD-01 to FD-08 (see [D1.4 §5](../01-assessment/bill-payment-portal.md#
 | FR-FD-12 | **Statements and summary**: deposits, accrued-to-date, paid, payable, expected at maturity, schedule, transactions. This replaces the on-the-fly `aggregatePrimeOnlendData` |
 | FR-FD-13 | **Holds**: place or release a hold on an FD (e.g. collateral). Optional, P2 |
 | FR-FD-14 | **Compat**: Giro's savings endpoints G-S1..G-S6, G-C1, G-C2 ([D2.7 §4](../02-current-state/fixed-deposits-current-state.md#4-giro-cba-endpoint-inventory-compatibility-contract)) with Fineract shapes, so Giro can switch base URL. The FD summary in the compat `GET /savingsaccounts/{id}` reports the **real** balances (deposits, interest posted) |
+| FR-FD-16 | **Maturity instructions** (recovery-team F-58): at opening or before maturity, the customer chooses (a) pay principal + interest to a linked account, (b) roll over principal and pay interest, or (c) roll over principal + interest. Rollover creates a new term at the then-current rate for that tenor/amount slab. Default instruction per product |
+| FR-FD-17 | **Retail term deposits for BANK tenants** (Pettysave-style "Term Deposits"; BS ₦85.2m [V]): customer-funded from CASA, cash or NIP; interest paid upfront, monthly or at maturity; premature liquidation per product; NDIC insured-deposit reporting. The same engine as investor FDs, without on-lending deployment |
 | FR-FD-15 | **Legacy parity mode** (migration only): for deposits migrated in flight, the product version can use `LEGACY_GIRO_DAILY_ROUNDED` interest (`round2(rate × cost / 365 / 100) × days`, 90-day quarters), so that investors receive exactly what Giro displays today until maturity |
 
 ## 3. Features & sub-features
@@ -47,10 +49,11 @@ It fixes FD-01 to FD-08 (see [D1.4 §5](../01-assessment/bill-payment-portal.md#
 | Interest | Daily accrual (COB), simple interest, day count, legacy parity mode | Yes | |
 | Payouts | Schedule, due detection, settlement, catch-up | Yes | |
 | Maturity / premature closure | | Yes / Yes (if the product allows) | [A] Product decision on premature closure (no code path exists today) |
-| Deployment to on-lending | Record + link | Yes (record), P7 (full participation accounting) | |
+| Deployment to on-lending | Record + link | Yes (record), P9 (full participation accounting) | |
 | Referral commission on FDs | | No (stays in Giro) | `payOnlendingReferralCommission` |
-| Recurring deposits | | No | [future/deposits](future/deposits.md) |
-| Compounding, auto-rollover | | No (P7) | Not offered today |
+| Recurring/commitment deposits | | Yes (P6-A) | [savings-current-accounts](savings-current-accounts.md) FR-SAV-09 |
+| Auto-rollover (maturity instructions) | | **Yes** (FR-FD-16, P6-A) | Recovery-team F-58 |
+| Compounding | | No (P9) | Not offered today |
 | Withholding tax on interest | | [A] | Nigerian WHT on deposit interest (10%) may apply. Finance and tax to confirm |
 
 ## 4. Business rules & validations
@@ -209,4 +212,4 @@ All of a command's lines are posted in one transaction (platform rule). The depo
   3. Premature-closure policy (not offered today).
   4. Withholding tax on interest.
   5. Tenure `'2'`: is it 2 days or 2 months (FD-03)?
-  6. Whether the Giro **wallet** ledger also moves into Fineract-Mod (out of scope for this module; see [future/savings](future/savings.md)).
+  6. Whether the Giro **wallet** ledger also moves into Fineract-Mod (out of scope for this module; see [savings-current-accounts](savings-current-accounts.md) FR-SAV-14).

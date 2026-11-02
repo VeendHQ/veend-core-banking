@@ -33,12 +33,17 @@ flowchart LR
     API & WK & CK --> RD[(Redis<br/>Bull queues, rate limits)]
     WK -- signed webhooks --> VT
     WK -- signed webhooks --> GIRO
+    BR[Bank tenant channels:<br/>branch/teller UI, internet/mobile banking, USSD] -- OIDC / OAuth2 --> API
+    WK <--> NIBSS[NIBSS NIP/NEFT/e-mandate]
+    WK <--> BILL[Bills aggregators:<br/>Entrazact, PurePay]
+    API <--> CARDP[Card processor / switch]
+    WK --> REGP[CBN / NDIC portals,<br/>credit bureaus, NFIU]
     WK -- optional --> BUS[(Kafka / event bus, future)]
     FM -. read-only replica .-> BI[BI / regulator reporting]
     OLD[(LendLot / Fineract DB)] -. ETL, migration only .-> FM
 ```
 
-Money rails (Giro, Remita, IPPIS, Paystack, …) stay integrated in **veend-tenant**, and investor funding and payouts stay in **Giro**. Fineract-Mod is the **system of record for loans, fixed deposits and the GL**. It does not move money. See [integrations-payments](../05-modules/integrations-payments.md).
+Money rails (Giro, Remita, IPPIS, Paystack, …) stay integrated in **veend-tenant**, and investor funding and payouts stay in **Giro**: for these LENDER and TREASURY tenants, Fineract-Mod is the system of record and does not move money. **For BANK tenants** (licensed MFBs such as Pettysave), Fineract-Mod is a full core banking system that also moves money: NIBSS, bills, teller cash and cards ([ADR-010](adr/ADR-010-full-mfb-core-banking-scope.md)). Tenant type selects the enabled modules. See [integrations-payments](../05-modules/integrations-payments.md).
 
 ## 3. Module map and boundaries
 
@@ -70,6 +75,24 @@ flowchart TB
     subgraph Deposits[deposits - P5-D]
         FDP[fixed deposits<br/>products, accounts, accrual,<br/>payouts, deployments]
     end
+    subgraph Banking[banking track - P6-A/B/C, BANK tenants]
+        CASA[savings / current / commitment]
+        PST[posting management]
+        TLR[teller, vault, branch]
+        PAY[payments, transfers, bills, NIBSS]
+        CRD[cards - P7-K]
+    end
+    subgraph Risk[credit-risk track - P7-R/G]
+        COLL[collateral, guarantors]
+        RS[restructuring]
+        RCV[recovery cases]
+        REG[regulatory and bureau reporting]
+    end
+    subgraph Ent[enterprise track - P7-E]
+        FA[fixed assets, amortization]
+        PRL[payroll]
+        SHR[shareholders]
+    end
     subgraph Ledger[ledger - P3]
         GL[chart of accounts, journals,<br/>product-GL mapping, closures]
     end
@@ -90,6 +113,11 @@ flowchart TB
     LP --> GL
     FDP --> GL & CLI & CMD & COB
     COMPAT --> FDP
+    CASA & PST & TLR & PAY & CRD --> GL & CMD
+    CASA --> CLI
+    COLL & RS & RCV --> LN
+    REG --> GL & COB
+    FA & PRL & SHR --> GL
 ```
 
 **Dependency rules:**
@@ -129,7 +157,10 @@ src/
 | CRUD generator, Mongo Trash, GET cache, MCP CRUD | — | **Disable** for financial modules | — |
 | Request/response skeleton, logger, Docker, CI | — | **Retain** | — |
 | Fixed deposits | **Retain** the FD status codes (100–800), savings accounting roles and rate-chart concept; **customize** with explicit tenure units, a locked rate, payout schedules, and a legacy Giro parity calculator | — | TypeScript module (P5-D) |
-| Savings/wallet, recurring deposits, groups, investor, working capital | Future reference | — | Future (P7+) |
+| Savings, current, commitment accounts; overdrafts | **Retain** semantics (`fineract-savings`: overdraft, min balance, lock-in, WHT, dormancy, status codes) | — | TypeScript module (P6-A) |
+| Teller/cashier, collateral, guarantors, rescheduling, shares, credit bureau | **Retain** concepts from `fineract-branch` teller, collateral management, `Guarantor`, `LoanRescheduleRequest`, share accounts, `CreditBureau` | — | TypeScript modules (P6-B, P7-R, P7-E, P7-G) |
+| NIBSS/bills, cards, payroll, fixed assets, CBN returns, recovery cases, ECL | — (not in Fineract) | — | **Build** from the recovery-team guide and regulatory sources |
+| Groups, investor/participation, working capital | Future reference | — | Future (P9) |
 
 ## 5. Quality attributes and targets
 
@@ -151,4 +182,4 @@ src/
 - [Security and tenancy](security-tenancy.md)
 - [Transaction processing, accounting, events, jobs](processing.md)
 - [Operations: logging, monitoring, deployment](operations.md)
-- ADRs: [001](adr/ADR-001-typescript-rebuild.md) · [002](adr/ADR-002-postgres-decimal-orm.md) · [003](adr/ADR-003-tenancy-model.md) · [004](adr/ADR-004-ledger-design.md) · [005](adr/ADR-005-command-pipeline.md) · [006](adr/ADR-006-outbox-events.md) · [007](adr/ADR-007-lendlot-compat-facade.md) · [008](adr/ADR-008-framework-hardening.md) · [009](adr/ADR-009-fineract-as-test-oracle.md)
+- ADRs: [001](adr/ADR-001-typescript-rebuild.md) · [002](adr/ADR-002-postgres-decimal-orm.md) · [003](adr/ADR-003-tenancy-model.md) · [004](adr/ADR-004-ledger-design.md) · [005](adr/ADR-005-command-pipeline.md) · [006](adr/ADR-006-outbox-events.md) · [007](adr/ADR-007-lendlot-compat-facade.md) · [008](adr/ADR-008-framework-hardening.md) · [009](adr/ADR-009-fineract-as-test-oracle.md) · [010](adr/ADR-010-full-mfb-core-banking-scope.md)

@@ -34,7 +34,8 @@ This module records every post-disbursement monetary event on a loan, allocates 
 | Interest waiver | Yes |
 | Prepayment / foreclosure quote and payoff | Yes (via the payoff-quote and repayment of the quote) |
 | Recovery repayment (after write-off) | Yes (see [writeoff-provisioning](writeoff-provisioning.md)) |
-| Charge-back, merchant refund, payout refund, goodwill, re-age, re-amortize | No (P7) |
+| Re-age, re-amortize | Yes (P7-R, [restructuring-rescheduling](restructuring-rescheduling.md)) |
+| Charge-back, merchant refund, payout refund, goodwill | No (P9) |
 | Bulk repayment import | Yes: `POST /v1/repayments/batch` (up to 500 items, each idempotent; per-item results) for payroll files |
 
 ## 4. Business rules

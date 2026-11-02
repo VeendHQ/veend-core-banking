@@ -20,11 +20,24 @@ Each module follows the fixed 14-section [template](_template.md). Module IDs pr
 | Events and notifications | P5 (outbox in P0) | P1 | No | [events-notifications.md](events-notifications.md) |
 | Integrations boundary and LendLot-compat facade | P5 | P0 | **Yes** (all) | [integrations-payments.md](integrations-payments.md) |
 | **Fixed deposits** (Giro investor term deposits) | P5-D | P0 | **Yes** (Giro G-S1..G-S6, G-C1/G-C2) | [fixed-deposits.md](fixed-deposits.md) |
-| *Future:* savings / Giro wallet | P7+ | P3 (decision pending) | — | [future/savings.md](future/savings.md) |
-| *Future:* recurring deposits, FD rollover and compounding | P7+ | P3 | — | [future/deposits.md](future/deposits.md) |
-| *Future:* groups / GLIM | P7+ | P3 | — | [future/groups.md](future/groups.md) |
-| *Future:* rescheduling / restructuring | P7 | P2 | — | [future/rescheduling.md](future/rescheduling.md) |
-| *Future:* participation / inter-tenant funding | Design P3, build P7 | P1 | Interim as-is | [future/investor.md](future/investor.md) |
+| Reconciliation and exception management | P5 | P1 (P0 for go-live controls) | No (new; recovery-team RT-09) | [reconciliation-exceptions.md](reconciliation-exceptions.md) |
+| **Banking track (ADR-010; recovery-team features)** |||||
+| Savings, current and commitment accounts (incl. overdrafts) | P6-A | P0 (BANK) | Giro wallet mirror | [savings-current-accounts.md](savings-current-accounts.md) |
+| Posting management (manual, batch, transfers, approvals, reversals) | P6-B | P0 (BANK) | No | [posting-management.md](posting-management.md) |
+| Teller, vault, cash and branch operations | P6-B | P0 (BANK) | No | [teller-branch-cash.md](teller-branch-cash.md) |
+| Payments, transfers, bills and NIBSS | P6-C | P0 (BANK) | No | [payments-transfers-bills.md](payments-transfers-bills.md) |
+| **Credit-risk track** |||||
+| Collateral and guarantors (incl. mortgage support) | P7-R | P1 | No | [collateral-guarantors.md](collateral-guarantors.md) |
+| Restructuring, rescheduling and refinancing | P7-R | P1 | No | [restructuring-rescheduling.md](restructuring-rescheduling.md) |
+| Recovery and collections case management | P7-R | P1 | No | [recovery-collections.md](recovery-collections.md) |
+| **Enterprise track** |||||
+| Fixed assets and amortization | P7-E | P1 | No | [fixed-assets-amortization.md](fixed-assets-amortization.md) |
+| Payroll | P7-E | P2 | No | [payroll.md](payroll.md) |
+| Shareholder management | P7-E | P2 | No | [shareholder-management.md](shareholder-management.md) |
+| Card management | P7-K | P2 | No | [card-management.md](card-management.md) |
+| Regulatory and credit-bureau reporting (full CBN MMFBR, NDIC, AML, bureaus) | P7-G | P0 (BANK) | No | [regulatory-reporting.md](regulatory-reporting.md) |
+| *Future:* groups / GLIM | P9 | P3 | — | [future/groups.md](future/groups.md) |
+| *Future:* participation / inter-tenant funding | Design P3, build P9 | P1 | Interim as-is | [future/investor.md](future/investor.md) |
 
 ## Cross-module dependency graph
 
@@ -54,4 +67,11 @@ flowchart LR
     LN & TXN & CLI & LP & CHG & RPT --> COMPAT[compat facade]
     CLI & ACC & COB --> FD[fixed-deposits]
     FD --> COMPAT
+    CLI & ACC & COB --> CASA[savings-current]
+    CASA --> PST[posting-mgmt] & TLR[teller-branch] & PAY[payments-NIBSS]
+    PAY --> CRD[cards]
+    LN --> COLL[collateral-guarantors] & RS[restructuring]
+    COB --> RCV[recovery] & REG[regulatory-reporting]
+    ACC --> FA[fixed-assets] & PRL[payroll] & SHR[shareholders]
+    WO --> REG
 ```

@@ -5,6 +5,7 @@
 > **Planning assumptions [A]:**
 > - Team: 4 backend engineers (TypeScript), 1 QA/SDET, 1 DevOps (shared), a finance/accounting SME (~40%), a product owner, and access to the LendLot production DB (read replica) and the `APICalls` logs.
 > - Durations are engineering weeks for this team. Calendar dates are set at kickoff.
+> - **ADR-010 scope (full MFB CBS)** adds three parallel tracks: banking (P6-A/B/C), credit risk and regulatory (P7-R, P7-G), and enterprise and cards (P7-E, P7-K). These need a **second squad** (≈ 4 engineers + 1 SDET) from week 20, plus a compliance/regulatory SME and NIBSS/processor onboarding lead time. Without it, add about 40 weeks to the plan.
 
 ## 1. Phase overview
 
@@ -23,11 +24,21 @@ gantt
     P4 COB, write-off, provisioning                               :p4, after p3, 5
     P5 Reporting, events, compat facade, CbaClient SDK            :p5, after p4, 5
     P5-D Fixed deposits (Giro) + savings compat                    :p5d, after p4, 6
+    section Banking track (squad 2)
+    P6-A Savings, current, commitment, overdrafts                  :p6a, after p4, 8
+    P6-B Posting mgmt, teller, vault, branch                       :p6b, after p6a, 6
+    P6-C Payments, NIBSS, bills, mandates                          :p6c, after p6a, 8
+    section Risk, regulatory, enterprise (squad 2)
+    P7-R Collateral, guarantors, restructuring, recovery, mortgage :p7r, after p6b, 8
+    P7-G Regulatory returns, credit bureau, ECL                    :p7g, after p6c, 8
+    P7-E Fixed assets, payroll, shareholders                       :p7e, after p7r, 6
+    P7-K Cards and disputes                                        :p7k, after p7g, 6
     section Migrate
     P6 ETL, reconciliation, shadow run, tenant cut-overs          :p6, after p5, 8
     P6-G Giro FD migration + cut-over                              :p6g, after p5d, 5
+    P8-B BankOne (Pettysave) migration + cut-over                  :p8b, after p7k, 8
     section Future
-    P7 Rescheduling, participation, savings/deposits...           :p7, after p6, 12
+    P9 Groups, participation accounting, Kafka sink...            :p9, after p8b, 12
 ```
 
 **Critical path:** P0 → P2 (schedule-engine parity) → P3 (ledger + transactions) → P5 (compat facade) → P6. P-D runs in parallel with P0 and **must finish before P2 starts**, because golden fixtures need production product configurations.
@@ -44,6 +55,14 @@ gantt
 | P5-D | **G5-D:** FD engine equals Giro's current figures exactly in legacy mode, and the native mode is approved by finance; Giro savings-compat corpus green; deposit sub-ledger equals GL | 6 (parallel to P5; needs +1 engineer, or extends the plan by about 4 weeks) |
 | P6 | **G6:** per-tenant cut-overs complete with zero reconciliation diffs | 8 |
 | P6-G | **G6-G:** Giro FD book migrated, opening liability approved by finance, Giro switched | 5 (parallel to P6) |
+| P6-A | **G6-A:** CASA products and interest golden vs Fineract savings; KYC-tier limits; overdraft classification; statement = ledger | 8 |
+| P6-B | **G6-B:** posting desk, batch (duplicate-upload UAT), teller EOD balancing, inter-branch netting = 0 | 6 |
+| P6-C | **G6-C:** NIBSS certification passed [A]; bills providers live in sandbox; 100% payment reconciliation; no pending payment shown as success | 8 |
+| P7-R | **G7-R:** collateral/guarantor guards on approval; reschedule history preserved; PTP matching; mortgage product golden | 8 |
+| P7-G | **G7-G:** Pettysave's 30-Sep-2026 MMFBR set regenerated from migrated data, with every line reconciled or explained; bureau files accepted by all three bureaus; ECL model approved | 8 |
+| P7-E | **G7-E:** depreciation, payroll and dividend runs tie to GL; finance UAT | 6 |
+| P7-K | **G7-K:** processor certification [A]; PCI scope review; dispute workflow UAT | 6 |
+| P8-B | **G8-B:** Pettysave migrated from BankOne; TB, BS, PAR, CASA balances and CBN returns reconcile; regulator notification [A] | 8 |
 
 ## 2. Phase P-D: Production discovery (parallel to P0)
 
@@ -57,6 +76,7 @@ gantt
 | D6 Finance policy workshop: accrual upfront vs periodic, write-off treatment, provisioning %, reversal windows, maker-checker thresholds, rounding | Signed policy sheet | All [A] policy items in the module specs closed |
 | D7 Business confirmations: top-up behaviour (DF-07), Vida repayment posting (DF-09), LoanDisk decommission, restructuring practice | Decision log | |
 | D8 **Giro FD discovery**: export Giro-tenant FD savings products (10, 12, 5, 6, 13, 11 and the active list), FD account counts by generation (G1 non-V3, G2 CBA-exclusive), open `Primelogs`, `interestPayouts`, expired-unrefunded accounts, pending `disbursement_failed`; scrubbed Giro `APICalls` for G-S*/G-C* | Snapshot + summary | Volumes and balances per generation known |
+| D10 **BankOne discovery (Pettysave)**: vendor data-access route (DB/API/export), data dictionary, product catalogue (CASA, TD, loans), entry codes, tellers/branches, NIBSS/card/bills provider contracts (Entrazact, PurePay), CBN return process; resolution of the 761 classification discrepancy | Discovery pack | Sizing for the P6-A..P8-B tracks confirmed; build-vs-buy re-confirmed (ADR-010 [A]) |
 | D9 **FD policy workshop** (finance, treasury, product): balance-sheet owner of deposits, accrual start (funding vs deployment), tenure `'2'` meaning, premature closure, WHT on interest, quarter definition, Giro wallet in or out of scope | Signed decision sheet | All [A] items in fixed-deposits §14 closed |
 
 ## 3. Phase P0: Foundations
@@ -147,6 +167,9 @@ gantt
 | Events | Webhooks | Subscriptions, signing, retries, DLQ, replay | Deliverer, APIs | Outbox | | 10k events with 1% failure injection: all eventually delivered once-or-more, in per-loan order | Chaos | P1 |
 | Compat | Completion | Remaining endpoints, error shapes, usage metrics | | All | Facade | 100% of the recorded corpus | Contract | P0 |
 | SDK | `@veend/cba-client` | Typed native client, retries with idempotency keys, webhook verifier | Package | Native API | npm package | Used by the veend-tenant spike | Unit | P1 |
+| Reconciliation | Receipt register, statement import, matching, controls (a)–(g), exceptions | See [spec](05-modules/reconciliation-exceptions.md) | Tables, matcher, control runner | Accounting, COB | Module | Injected drift detected; duplicate callback produces one posting and zero exceptions; pending receipt changes no balance | Integration + fault injection | P0 (controls) / P1 |
+| Reporting | Statements, call-over, report metadata, CBN core returns (300, 1000, 761, 771, 763), `rpt_views` | FR-RPT-08..12 | Report modules | Accounting, COB | Reports | CBN returns tie to TB; statement closing = ledger; historical rerun reproducible | UAT with compliance | P1 |
+| UAT | Recovery-team UAT pack (disbursement, repayment, duplicate upload, reversal, pending/failed, statement, loan book, TB, historical rerun) | Evidence template per scenario | — | All | Signed UAT pack | Every scenario passes with retained evidence | UAT | **P0 gate (G5)** |
 | Security | Pen test (**G-SEC**) | External test | Fix findings | All | Report | No high or critical findings open | — | P0 |
 | Ops | Runbooks | See operations §4 | | | Runbooks | Dry-run each | — | P1 |
 
@@ -166,6 +189,20 @@ Depends on P3 (accounting, clients) and P4 (COB framework). It can start once G4
 | Compat | Giro savings | G-C1, G-C2, G-S1..G-S6 (+ wallet-mirror stub, holds) | Mappers | Above | Routes | Giro `APICalls` corpus green | Contract | P0 |
 | SDK | Deposits client | `@veend/cba-client` deposits namespace | Package | Native API | npm | Used by the Giro spike | Unit | P1 |
 
+## 8b. Banking, risk, regulatory and enterprise tracks (ADR-010)
+
+Each module spec lists its own requirements and tests. This table gives the delivery sequencing, dependencies and gates. The feature checklist is the [recovery-team feature register](03-gap-analysis/recovery-team-feature-register.md). **Every F-nn must be covered by a passing acceptance test before G8-B.**
+
+| Phase | Modules | Depends on | Key technical tasks | Acceptance (gate) | Prio |
+|---|---|---|---|---|---|
+| P6-A | [savings-current-accounts](05-modules/savings-current-accounts.md), FD maturity instructions and retail TDs ([fixed-deposits](05-modules/fixed-deposits.md) FR-FD-16/17), [clients](05-modules/clients.md) FR-CLI-09..11, NUBAN | P3 ledger, P4 COB | Product versions, interest engine, holds, overdraft and its classification, commitment plans, standing instructions, dormancy, KYC tiers | G6-A | P0 |
+| P6-B | [posting-management](05-modules/posting-management.md), [teller-branch-cash](05-modules/teller-branch-cash.md), [organisation](05-modules/organisation.md) FR-ORG-07 | P6-A | Multi-leg postings, batch pipeline, approvals inbox, entry codes, teller sessions, vault movements, inter-branch accounting, branch recon control | G6-B | P0 |
+| P6-C | [payments-transfers-bills](05-modules/payments-transfers-bills.md) | P6-A, reconciliation | NIBSS adapters (NE, FT, TSQ, inbound), institution directory, bills adapters (Entrazact, PurePay), bulk payments, e-mandates, settlement recon, disputes | G6-C | P0 |
+| P7-R | [collateral-guarantors](05-modules/collateral-guarantors.md), [restructuring-rescheduling](05-modules/restructuring-rescheduling.md), [recovery-collections](05-modules/recovery-collections.md), mortgage ([loan-products](05-modules/loan-products.md) FR-LP-09), appraisal workflow ([loan-lifecycle](05-modules/loan-lifecycle.md) FR-LN-14/15), quick product (FR-LP-08) | P3, P4 | Coverage guards, schedule versioning, cure periods, case engine, PTP evaluator, commissions | G7-R | P1 |
+| P7-G | [regulatory-reporting](05-modules/regulatory-reporting.md), ECL ([writeoff-provisioning](05-modules/writeoff-provisioning.md) FR-WO-09/10), cash flow (FR-ACC-11), batch statements (FR-RPT-13), management reports (FR-RPT-14) | P6-A (deposit returns), P4 | Return mapping engine and validator, NDIC, AML CTR/STR hand-off, bureau files and enquiries, ECL model run | G7-G | P0 (BANK) |
+| P7-E | [fixed-assets-amortization](05-modules/fixed-assets-amortization.md), [payroll](05-modules/payroll.md), [shareholder-management](05-modules/shareholder-management.md), account categories (FR-ACC-10) | P3 | Asset register and depreciation, amortization runs, payroll and PAYE, register/allotment/dividends, reserves | G7-E | P1–P2 |
+| P7-K | [card-management](05-modules/card-management.md) | P6-A, P6-C | Processor adapter, issuance files, auth holds, settlement, disputes | G7-K | P2 |
+
 ## 9. Phase P6: Migration and cut-over
 
 See [07-migration-strategy.md](07-migration-strategy.md). Work items:
@@ -178,6 +215,17 @@ See [07-migration-strategy.md](07-migration-strategy.md). Work items:
 | veend-tenant changes M1–M3 | Client interface, references and value dates, write-off to CBA | Feature-flagged per tenant |
 | Cut-over | Per-tenant runbook, freeze, final delta, switch, smoke tests, hypercare | Go/no-go checklist signed |
 
+### P8-B: BankOne (Pettysave MFB) migration
+
+See [07-migration-strategy.md §13](07-migration-strategy.md#13-bankone-pettysave-mfb-migration).
+
+| Feature | Tasks | Acceptance |
+|---|---|---|
+| Source access | BankOne DB/API/export agreement with the vendor [A] | Full extract of customers, CASA, loans, schedules, transactions, GL, tellers, fixed assets |
+| ETL and mapping | CoA and account categories, products, entry codes, branches/tellers, NUBANs preserved | Row counts and balances match per account |
+| Reconciliation | TB, BS, PAR, CASA totals, CBN MMFBR regeneration | Zero unexplained diffs; the known 761 discrepancy resolved by compliance first |
+| Parallel run and cut-over | Weekend cut-over, channel switch (NIBSS routing, cards, USSD) | Go/no-go with CBN notification as required [A] |
+
 ### P6-G: Giro fixed-deposit migration
 
 See [07-migration-strategy.md §12](07-migration-strategy.md#12-giro-fixed-deposit-migration).
@@ -189,9 +237,9 @@ See [07-migration-strategy.md §12](07-migration-strategy.md#12-giro-fixed-depos
 | Giro changes G1–G3 | See D6 §12.4 | Feature-flagged |
 | Cut-over | Freeze FD jobs (`dailyCheckLoanAccounts`, `postInterest*`, `processDraftOnlendingFunds`), final delta, switch base URL | Go/no-go signed |
 
-## 10. Phase P7: Post-MVP backlog (ordered)
+## 10. Phase P9: Post-MVP backlog (ordered)
 
-1. Rescheduling / re-age / re-amortise ([spec](05-modules/future/rescheduling.md))
+1. ~~Rescheduling~~ (moved into scope: P7-R, [spec](05-modules/restructuring-rescheduling.md))
 2. On-lending participation model ([spec](05-modules/future/investor.md))
 3. Interest recalculation and progressive loans
 4. veend-tenant M4–M5: event-driven mirror and native API; facade retirement

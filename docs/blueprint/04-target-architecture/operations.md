@@ -35,6 +35,11 @@
 - Every journal entry and loan transaction carries `command_id`, which gives full traceability: transaction → command → actor → request.
 - **Auditor API:** `GET /v1/audit?entity=loan&id=…` returns the ordered command history with diffs.
 
+## 2a. Analytics access (Metabase)
+
+- BI tools connect to the **read replica** with a role that can only `SELECT` from `rpt_views.*`, never from base tables or ledger tables directly.
+- Each view has a catalogue entry (definition, grain, as-of semantics). This meets the recovery-team guide §9: "read approved reporting views… do not directly alter financial balances".
+
 ## 3. Deployment
 
 ```mermaid

@@ -6,6 +6,8 @@
 
 ## 1. Overview & business purpose
 
+> **ADR-010 update:** the "CBA does not move money" boundary below applies to LENDER and TREASURY tenants. BANK tenants move money inside Fineract-Mod through [payments-transfers-bills](payments-transfers-bills.md), [teller-branch-cash](teller-branch-cash.md) and [card-management](card-management.md).
+
 This module sets the boundary between Fineract-Mod and the outside world:
 1. **What the CBA does not do:** move money, talk to payment rails, run credit decisioning, or send borrower notifications. Those stay in veend-tenant, which already integrates about 15 providers.
 2. **How rails are represented in the CBA:** payment types, clearing accounts and external references.
@@ -24,7 +26,7 @@ This module sets the boundary between Fineract-Mod and the outside world:
 | FR-INT-06 | Compat derived idempotency (api-design §4) |
 | FR-INT-07 | Compat error shape: `{developerMessage, httpStatusCode, defaultUserMessage, userMessageGlobalisationCode, errors:[{developerMessage, defaultUserMessage, userMessageGlobalisationCode, parameterName}]}` |
 | FR-INT-08 | Compat traffic metrics per endpoint and tenant, plus a "last used" timestamp (to know when the facade can be retired) |
-| FR-INT-09 | Credit-bureau reporting extract (CRC, FirstCentral, CreditRegistry formats): P7 [A] |
+| FR-INT-09 | Credit-bureau reporting extract (CRC, FirstCentral, CreditRegistry formats): **in scope, P7-G** via [regulatory-reporting](regulatory-reporting.md) |
 
 ## 3. Features
 

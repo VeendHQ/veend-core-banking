@@ -1,0 +1,184 @@
+import chai from 'chai';
+chai.should();
+import chaiAsPromised from 'chai-as-promised';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+chai.use(sinonChai);
+import <%= service %> from '../../src/models/<%= service %>s.js';
+import '../../src/services/queue/workers.js';
+
+describe('<%= service %> Model',function(){
+
+    let id;
+    let id2;
+
+    before(function(){  /* jslint ignore:line */
+    });
+
+    describe('<%= service %> CRUDS', function(){
+        it('should save data', function(done){
+            var my<%= object %> = <%= service %>.create({name: 'femi'});
+
+            my<%= object %>.then(function(res){
+                res.should.be.an('object'); /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should read data', function(done){
+            var my<%= object %> = <%= service %>.findOne({where: {name: 'femi'}});
+
+            my<%= object %>.then(function(res){
+                if (!res) return done(new Error('expected record'));
+                res.should.be.an('object'); /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should read all data', function(done){
+            var my<%= object %> = <%= service %>.findAll();
+
+            my<%= object %>.then(function(res){
+                res.should.be.an('array'); /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should update data', function(done){
+            var cb = sinon.spy();
+            var my<%= object %> = <%= service %>.update({name: 'Olaoluwa'}, { where: {name: 'femi'}});
+
+            my<%= object %>.then(function(res){
+                cb();
+                cb.should.have.been.calledOnce; /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should search data', function(done){
+            // Search needs more work for more accuracy
+            var my<%= object %> = <%= service %>.search('femi');
+
+            my<%= object %>.then(function(res){
+                res.should.be.an('array'); /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should delete data', function(done){
+            var cb2 = sinon.spy();
+            var our<%= object %> = <%= service %>.bulkCreate([{name:'Olaolu'},{name: 'fola'},{name: 'bolu'}]);
+
+            our<%= object %>.then(function(res){
+                return <%= service %>.destroy({where: {name: 'bolu'}});
+            }).then(function(res){
+                cb2();
+                cb2.should.have.been.calledOnce; /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should add createdAt', function(done){
+            var my<%= object %> = <%= service %>.create({name: 'this is for the gods'});
+
+            my<%= object %>.then(function(res){
+                id = res._id;
+                res.should.have.property('createdAt');
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should add updatedAt', function(done){
+            var my<%= object %> = <%= service %>.create({name: 'i am a demigod!'});
+            my<%= object %>.then(function(res){
+                id2 = res._id;
+                return <%= service %>.update({name: 'This is the titan'}, {where: {_id: id}});
+            })
+            .then(function(res){
+                return <%= service %>.findOne({where: {name: 'This is the titan'}});
+            })
+            .then(function(res){
+                if (!res) return done(new Error('expected record'));
+                res.should.have.property('updatedAt');
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should tag database entries properly', async function(){
+            var my<%= object %> = await <%= service %>.create({name: 'femi',someOtherStringData: 'stuff'});
+            
+            return new Promise(function(resolve, reject) {
+            setTimeout(function(){
+                <%= service %>.findOne({where: {_id: my<%= object %>._id}})
+                .then(function(res){
+                    if (!res) return reject(new Error('expected record'));
+                    res.should.be.an('object'); /* jslint ignore:line */
+                    // SQL: tags field exists; may be null until search-index job runs
+                    chai.expect(res).to.have.property('tags');
+                    resolve(res);
+                })
+                .catch(function(err){
+                    reject(err);
+                });
+            },5000);
+            });
+            });
+
+        it('should count returned records', function(done){
+            var my<%= object %> = <%= service %>.count({where: {name: 'This is the titan'}});
+
+            my<%= object %>.then(function(res){
+                res.should.be.a('number'); /* jslint ignore:line */
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should find a record by id and delete', function(done){
+            var my<%= object %> = <%= service %>.findOne({where: {_id: id2}});
+
+            my<%= object %>.then(function(res){
+                if (!res) return done(new Error('expected record'));
+                return res.destroy();
+            })
+            .then(function(){
+                done();
+            })
+            .catch(function(err){
+                done(err);
+            });
+        });
+
+        it('should have transaction object', function(done){
+            chai.expect(<%= service %>).to.have.property('transaction');
+            done();
+        });
+
+    });
+});

@@ -1,0 +1,135 @@
+version: '3'
+services:
+
+    # MySQL
+    mysqldb:
+        image: mysql:8.0
+        restart: always
+        environment:
+            - MYSQL_ROOT_PASSWORD=command
+            - MYSQL_DATABASE=giro
+        volumes:
+            - mysql:/var/lib/mysql
+        ports:
+            - "3306:3306"
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pcommand"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
+
+    # The Application
+    api:
+        build:
+            context: ./
+            dockerfile: ./Dockerfile
+        ports:
+            - 8080:8080
+        depends_on:
+            redis: { condition: service_healthy }
+            mongo: { condition: service_healthy }
+            mysqldb: { condition: service_healthy }
+        environment:
+            - MONGOLAB_URL=mongodb://mongo:27017/giro
+            - LOG_MONGOLAB_URL=mongodb://mongo:27017/giroLogs
+            - REDIS_URL=redis://redis:6379/1
+            - REDIS_QUEUE_URL=redis://redis:6379/2
+            - SQL_USERNAME=root
+            - SQL_PASSWORD=command
+            - SQL_DATABASE=giro
+            - SQL_HOST=mysqldb
+        restart: always
+
+    # The Web Server
+    clock:
+        build:
+            context: ./
+            dockerfile: ./clock/Dockerfile
+        depends_on:
+            redis: { condition: service_healthy }
+            mongo: { condition: service_healthy }
+            mysqldb: { condition: service_healthy }
+        environment:
+            - MONGOLAB_URL=mongodb://mongo:27017/giro
+            - LOG_MONGOLAB_URL=mongodb://mongo:27017/giroLogs
+            - REDIS_URL=redis://redis:6379/1
+            - REDIS_QUEUE_URL=redis://redis:6379/2
+            - SQL_USERNAME=root
+            - SQL_PASSWORD=command
+            - SQL_DATABASE=giro
+            - SQL_HOST=mysqldb
+        restart: always
+
+    # The Worker
+    worker:
+        build:
+            context: ./
+            dockerfile: ./workers/Dockerfile
+        depends_on:
+            redis: { condition: service_healthy }
+            mongo: { condition: service_healthy }
+            mysqldb: { condition: service_healthy }
+        environment:
+            - MONGOLAB_URL=mongodb://mongo:27017/giro
+            - LOG_MONGOLAB_URL=mongodb://mongo:27017/giroLogs
+            - REDIS_URL=redis://redis:6379/1
+            - REDIS_QUEUE_URL=redis://redis:6379/2
+            - SQL_USERNAME=root
+            - SQL_PASSWORD=command
+            - SQL_DATABASE=giro
+            - SQL_HOST=mysqldb
+        restart: always
+    
+    # Php MyAdmin (platform required: official image is amd64 only; runs via emulation on arm64)
+    mysqladmin:
+        image: phpmyadmin/phpmyadmin
+        platform: linux/amd64
+        environment:
+            - PMA_HOST=mysqldb
+        restart: always
+        depends_on:
+            mysqldb: { condition: service_healthy }
+        ports:
+            - "8000:80"
+
+    # MongoDB Admin
+    mongoadmin:
+        image: mongo-express
+        environment:
+            - ME_CONFIG_MONGODB_SERVER=mongo
+        restart: always
+        depends_on:
+            mongo: { condition: service_healthy }
+        ports:
+            - "80:8081"
+
+    # Redis
+    redis:
+        image: redis:latest
+        restart: always
+        ports:
+            - "6379:6379"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+            start_period: 5s
+
+    # Mongo
+    mongo:
+        image: mongo:latest
+        restart: always
+        ports:
+            - "27017:27017"
+        healthcheck:
+            test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
+        
+volumes:
+    mysql:
+        driver: local
